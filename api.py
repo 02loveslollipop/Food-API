@@ -5,12 +5,13 @@ import json
 from config import config
 from request import ModelRequest
 from functools import wraps
+from datetime import datetime as dt
 
 api = Flask(__name__)
 conf = config()
 iaRequest = ModelRequest(host=conf.ia_ip,port=conf.ia_port,argsList=['ingridents','r2'],resource='createRecipe')
 
-def login_required(func):
+def login_required(func): # Wrapper to check if the user is in session if required
     @wraps(func)
     def wrapper(*args, **kwargs):
         if 'username' in session:
@@ -19,12 +20,12 @@ def login_required(func):
             return jsonify({'message': 'user not in session'}), 401
     return wrapper
 
-def checkPassword(username,password) -> bool:
-    #TODO: check password in the sql database
+def checkPassword(username,password) -> bool: # check if the password is correct
+    #TODO: check password in the mongo database
     return True
 
 @api.route('/login', methods=['POST'])
-def login():
+def login(): #Add user to session
     username = request.form['username']
     password = request.form['password']
     if checkPassword(username,password):
@@ -35,68 +36,38 @@ def login():
 
 @api.route('/logout')
 @login_required
-def logout():
+def logout(): #Remove user from session
     session.pop('username', None)
     return jsonify({'message': 'logout successful'}), 200
 
-@api.route('/createRecipe', methods=['POST'])
+@api.route('/create_recipe', methods=['POST'])
 @login_required
-def createRecipe():
+def createRecipe(): # request a recipe inference to the IA model
     ingredients = request.form['ingredients']
     r2 = requests.form['determination']
     response = iaRequest.request([ingredients,r2])
     if response.status_code == 200:
-        #TODO: if request is successful, save recipe in the sql database, and return the formated result to send to flutter
+        #if the request was successful send the result formatted to flutter
         resultData = "" #Formated result to send to flutter
         return jsonify({'message': resultData}), 200
     else:
         return jsonify({'message': 'Internal server error'}), 500
 
-@api.route('/retrieveFoodRequestByUser', methods=['POST'])
+@api.route('/insert_recipe_db', methods=['POST'])
 @login_required
-def retrieveFoodRequestByUser():
-    username = session['username']
-    #TODO: retrieve food request from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
+def insertRecipeDB(): # add a recipe to the user collection of recipes
+    name = request.form['recipe']
+    date = dt.now()
+    ingredients = request.form['ingredients']
+    #TODO: add recipe to user collection of recipes
+    return jsonify({'message': 'recipe inserted'}), 200
 
-@api.route('/retrieveFoodRequestDescriptionByID', methods=['POST'])
+@api.route('/get_recipe_db', methods=['POST'])
 @login_required
-def retrieveFoodRequestDescriptionByID():
-    id = request.form['id']
-    #TODO: retrieve food request from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
-
-@api.route('/RetrieveIngredientByID', methods=['POST'])
-@login_required
-def RetrieveIngredientByID():
-    id = request.form['id']
-    #TODO: retrieve ingredient from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
-
-@api.route('/RetrieveAllIngredients', methods=['POST'])
-@login_required
-def RetrieveAllIngredients():
-    #TODO: retrieve all ingredients from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
-
-@api.route('/RetrieveAllRecipes', methods=['POST'])
-@login_required
-def RetrieveAllRecipes():
-    #TODO: retrieve all recipes from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
-
-@api.route('/RetrieveRecipeByID', methods=['POST'])
-@login_required
-def RetrieveRecipeByID():
-    id = request.form['id']
-    #TODO: retrieve recipe from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
+def getRecipeDB(): # get all the recipes of the user
+    user = request.form['user']
+    #TODO: get all the recipes of the user in the mongo database
+    result = []
+    return jsonify({'message': result}), 200
     
-
-
+    
