@@ -48,24 +48,23 @@ def createRecipe(): # request a recipe inference to the IA model
     response = iaRequest.request([ingredients,r2])
     if response.status_code == 200:
         #if the request was successful send the result formatted to flutter
-        resultData = "" #Formated result to send to flutter
-        return jsonify({'message': resultData}), 200
+        return response.json(), 200 # TODO: format the response to flutter
     else:
         return jsonify({'message': 'Internal server error'}), 500
 
 @api.route('/insert_recipe_db', methods=['POST'])
 @login_required
 def insertRecipeDB(): # add a recipe to the user collection of recipes
-    name = request.form['recipe']
+    name = request.header.get('name')
     date = dt.now()
-    ingredients = request.form['ingredients']
+    ingredients = request.header.get('ingredients')
     #TODO: add recipe to user collection of recipes
     return jsonify({'message': 'recipe inserted'}), 200
 
 @api.route('/get_recipe_db', methods=['POST'])
 @login_required
 def getRecipeDB(): # get all the recipes of the user
-    user = request.form['user']
+    user = request.header.get('user')
     #TODO: get all the recipes of the user in the mongo database
     result = []
     return jsonify({'message': result}), 200
