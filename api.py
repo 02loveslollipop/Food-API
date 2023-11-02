@@ -24,7 +24,7 @@ def checkPassword(username,password) -> bool: # check if the password is correct
     #TODO: check password in the mongo database
     return True
 
-@api.route('/login', methods=['POST'])
+@api.route('/login', methods=['GET'])
 def login(): #Add user to session
     username = request.form['username']
     password = request.form['password']
@@ -40,7 +40,7 @@ def logout(): #Remove user from session
     session.pop('username', None)
     return jsonify({'message': 'logout successful'}), 200
 
-@api.route('/create_recipe', methods=['POST'])
+@api.route('/create_recipe', methods=['GET'])
 @login_required
 def createRecipe(): # request a recipe inference to the IA model
     ingredients = request.form['ingredients']
@@ -52,7 +52,7 @@ def createRecipe(): # request a recipe inference to the IA model
     else:
         return jsonify({'message': 'Internal server error'}), 500
 
-@api.route('/insert_recipe_db', methods=['POST'])
+@api.route('/insert_recipe_db', methods=['GET'])
 @login_required
 def insertRecipeDB(): # add a recipe to the user collection of recipes
     name = request.header.get('name')
@@ -61,7 +61,7 @@ def insertRecipeDB(): # add a recipe to the user collection of recipes
     #TODO: add recipe to user collection of recipes
     return jsonify({'message': 'recipe inserted'}), 200
 
-@api.route('/get_recipe_db', methods=['POST'])
+@api.route('/get_recipe_db', methods=['GET'])
 @login_required
 def getRecipeDB(): # get all the recipes of the user
     user = request.header.get('user')
