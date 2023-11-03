@@ -6,10 +6,12 @@ from config import config
 from request import ModelRequest
 from functools import wraps
 from datetime import datetime as dt
+from pymongo import MongoClient
 
 api = Flask(__name__)
 conf = config()
 iaRequest = ModelRequest(host=conf.ia_ip,port=conf.ia_port,argsList=['ingridents','r2'],resource='createRecipe')
+db = MongoClient(conf.mongo_uri)
 
 def login_required(func): # Wrapper to check if the user is in session if required
     @wraps(func)
@@ -69,4 +71,5 @@ def getRecipeDB(): # get all the recipes of the user
     result = []
     return jsonify({'message': result}), 200
     
-    
+if __name__ == '__main__':
+    api.run(debug=True, host='0.0.0.0', port=8080)
