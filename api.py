@@ -10,7 +10,7 @@ from pymongo import MongoClient
 
 api = Flask(__name__)
 conf = config()
-iaRequest = ModelRequest(host=conf.ia_ip,port=conf.ia_port,argsList=['ingridents','r2'],resource='createRecipe')
+iaRequest = ModelRequest(host=conf.ia_ip,port=conf.ia_port,argsList=['ingredients'],resource='request')
 db = MongoClient(conf.mongo_uri)
 
 def login_required(func): # Wrapper to check if the user is in session if required
@@ -46,8 +46,8 @@ def logout(): #Remove user from session
 @login_required
 def createRecipe(): # request a recipe inference to the IA model
     ingredients = request.form['ingredients']
-    r2 = requests.form['determination']
-    response = iaRequest.request([ingredients,r2])
+    
+    response = iaRequest.request([ingredients])
     if response.status_code == 200:
         #if the request was successful send the result formatted to flutter
         return response.json(), 200 # TODO: format the response to flutter
