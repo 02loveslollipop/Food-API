@@ -45,23 +45,23 @@ def logout(): #Remove user from session
 @api.route('/create_recipe', methods=['GET'])
 @login_required
 def createRecipe(): # request a recipe inference to the IA model
-    ingredients = request.form['ingredients']
-    
-    response = iaRequest.request([ingredients])
-    if response.status_code == 200:
-        #if the request was successful send the result formatted to flutter
-        return response.json(), 200 # TODO: format the response to flutter
+    ingredients = request.form['ingredients'] #The ingredinetes are passed as a vector of strings
+    ingredients = ','.join(ingredients) #Convert the list to a string separated by commas
+    response = iaRequest.request([ingredients]) #Send the request to the IA model
+    if response.status_code == 200: #If the request was successful
+        return response.json(), 200
     else:
-        return jsonify({'message': 'Internal server error'}), 500
+        return jsonify({'message': "This didn't work as expected :("}), 500 #TODO: search a less silly message
 
 @api.route('/insert_recipe_db', methods=['GET'])
 @login_required
-def insertRecipeDB(): # add a recipe to the user collection of recipes
+def addToFavoriteDB():
+    user = request.header.get('user')
     name = request.header.get('name')
+    url = request.header.get('url')
     date = dt.now()
-    ingredients = request.header.get('ingredients')
     #TODO: add recipe to user collection of recipes
-    return jsonify({'message': 'recipe inserted'}), 200
+    return jsonify({'message': 'added to favorite recipes of the user :)'}), 200 #TODO: search a less silly message
 
 @api.route('/get_recipe_db', methods=['GET'])
 @login_required
