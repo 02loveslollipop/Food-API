@@ -7,11 +7,15 @@ from request import ModelRequest
 from functools import wraps
 from datetime import datetime as dt
 from pymongo import MongoClient
+from flask_cors import CORS
 
 api = Flask(__name__)
+cors = CORS(api)
+api.config['CORS_HEADERS'] = 'Content-Type'
 conf = config()
 iaRequest = ModelRequest(host=conf.ia_ip,port=conf.ia_port,argsList=['ingredients'],resource='request')
 db = MongoClient(conf.mongo_uri)
+api.secret_key = conf.flask_secret
 
 def login_required(func): # Wrapper to check if the user is in session if required
     @wraps(func)
@@ -28,8 +32,18 @@ def checkPassword(username,password) -> bool: # check if the password is correct
 
 @api.route('/login', methods=['GET'])
 def login(): #Add user to session
-    username = request.form['username']
-    password = request.form['password']
+    username = request.headers.get('username')
+    password = request.headers.get('password')
+    print(username,password)
+    #TODO:delete from here
+    if username == 'test' and password == 'test':
+        session['username'] = username
+        print("Login successful")
+        return jsonify({'message': 'login successful'}), 200
+        
+    else:
+        return jsonify({'message': 'login failed'}), 401
+    #TODO: to here
     if checkPassword(username,password):
         session['username'] = username
         return jsonify({'message': 'login successful'}), 200
@@ -72,4 +86,4 @@ def getRecipeDB(): # get all the recipes of the user
     return jsonify({'message': result}), 200
     
 if __name__ == '__main__':
-    api.run(debug=True, host='0.0.0.0', port=8080)
+    api.run(debug=True, host='0.0.0.0', port=6970)
