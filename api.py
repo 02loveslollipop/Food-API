@@ -5,12 +5,19 @@ import json
 from config import config
 from request import ModelRequest
 from functools import wraps
+from datetime import datetime as dt
+from pymongo import MongoClient
+from flask_cors import CORS
 
 api = Flask(__name__)
+cors = CORS(api)
+api.config['CORS_HEADERS'] = 'Content-Type'
 conf = config()
-iaRequest = ModelRequest(host=conf.ia_ip,port=conf.ia_port,argsList=['ingridents','r2'],resource='createRecipe')
+iaRequest = ModelRequest(host=conf.ia_ip,port=conf.ia_port,argsList=['ingredients'],resource='request')
+db = MongoClient(conf.mongo_uri)
+api.secret_key = conf.flask_secret
 
-def login_required(func):
+def login_required(func): # Wrapper to check if the user is in session if required
     @wraps(func)
     def wrapper(*args, **kwargs):
         if 'username' in session:
@@ -19,14 +26,24 @@ def login_required(func):
             return jsonify({'message': 'user not in session'}), 401
     return wrapper
 
-def checkPassword(username,password) -> bool:
-    #TODO: check password in the sql database
+def checkPassword(username,password) -> bool: # check if the password is correct
+    #TODO: check password in the mongo database
     return True
 
-@api.route('/login', methods=['POST'])
-def login():
-    username = request.form['username']
-    password = request.form['password']
+@api.route('/login', methods=['GET'])
+def login(): #Add user to session
+    username = request.headers.get('username')
+    password = request.headers.get('password')
+    print(username,password)
+    #TODO:delete from here
+    if username == 'test' and password == 'test':
+        session['username'] = username
+        print("Login successful")
+        return jsonify({'message': 'login successful'}), 200
+        
+    else:
+        return jsonify({'message': 'login failed'}), 401
+    #TODO: to here
     if checkPassword(username,password):
         session['username'] = username
         return jsonify({'message': 'login successful'}), 200
@@ -35,68 +52,38 @@ def login():
 
 @api.route('/logout')
 @login_required
-def logout():
+def logout(): #Remove user from session
     session.pop('username', None)
     return jsonify({'message': 'logout successful'}), 200
 
-@api.route('/createRecipe', methods=['POST'])
+@api.route('/create_recipe', methods=['GET'])
 @login_required
-def createRecipe():
-    ingredients = request.form['ingredients']
-    r2 = requests.form['determination']
-    response = iaRequest.request([ingredients,r2])
-    if response.status_code == 200:
-        #TODO: if request is successful, save recipe in the sql database, and return the formated result to send to flutter
-        resultData = "" #Formated result to send to flutter
-        return jsonify({'message': resultData}), 200
+def createRecipe(): # request a recipe inference to the IA model
+    ingredients = request.form['ingredients'] #The ingredinetes are passed as a vector of strings
+    ingredients = ','.join(ingredients) #Convert the list to a string separated by commas
+    response = iaRequest.request([ingredients]) #Send the request to the IA model
+    if response.status_code == 200: #If the request was successful
+        return response.json(), 200
     else:
-        return jsonify({'message': 'Internal server error'}), 500
+        return jsonify({'message': "This didn't work as expected :("}), 500 #TODO: search a less silly message
 
-@api.route('/retrieveFoodRequestByUser', methods=['POST'])
+@api.route('/insert_recipe_db', methods=['GET'])
 @login_required
-def retrieveFoodRequestByUser():
-    username = session['username']
-    #TODO: retrieve food request from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
+def addToFavoriteDB():
+    user = request.header.get('user')
+    name = request.header.get('name')
+    url = request.header.get('url')
+    date = dt.now()
+    #TODO: add recipe to user collection of recipes
+    return jsonify({'message': 'added to favorite recipes of the user :)'}), 200 #TODO: search a less silly message
 
-@api.route('/retrieveFoodRequestDescriptionByID', methods=['POST'])
+@api.route('/get_recipe_db', methods=['GET'])
 @login_required
-def retrieveFoodRequestDescriptionByID():
-    id = request.form['id']
-    #TODO: retrieve food request from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
-
-@api.route('/RetrieveIngredientByID', methods=['POST'])
-@login_required
-def RetrieveIngredientByID():
-    id = request.form['id']
-    #TODO: retrieve ingredient from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
-
-@api.route('/RetrieveAllIngredients', methods=['POST'])
-@login_required
-def RetrieveAllIngredients():
-    #TODO: retrieve all ingredients from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
-
-@api.route('/RetrieveAllRecipes', methods=['POST'])
-@login_required
-def RetrieveAllRecipes():
-    #TODO: retrieve all recipes from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
-
-@api.route('/RetrieveRecipeByID', methods=['POST'])
-@login_required
-def RetrieveRecipeByID():
-    id = request.form['id']
-    #TODO: retrieve recipe from sql database
-    resultData = ""
-    return jsonify({'message': resultData}), 200
+def getRecipeDB(): # get all the recipes of the user
+    user = request.header.get('user')
+    #TODO: get all the recipes of the user in the mongo database
+    result = []
+    return jsonify({'message': result}), 200
     
-
-
+if __name__ == '__main__':
+    api.run(debug=True, host='0.0.0.0', port=6970)

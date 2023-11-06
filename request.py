@@ -1,6 +1,5 @@
 import requests
 import hashlib
-from console import Console
 
 class ModelRequest:
     def __init__(self, host: str, argsList: list, port: str = 80,resource: str = None, protocol: str = 'http') -> None:
