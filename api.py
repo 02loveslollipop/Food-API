@@ -34,8 +34,7 @@ def checkPassword(username,password) -> bool: # check if the password is correct
 def login(): #Add user to session
     username = request.headers.get('username')
     password = request.headers.get('password')
-    print(username,password)
-    #TODO:delete from here
+    #TODO:delete from here when the mongo database is ready
     if username == 'test' and password == 'test':
         session['username'] = username
         print("Login successful")
