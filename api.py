@@ -1,6 +1,6 @@
 #flask api
 import requests
-from flask import Flask, session, request, jsonify
+from flask import Flask, request, jsonify
 import json
 from config import config
 from request import ModelRequest
@@ -8,6 +8,7 @@ from functools import wraps
 from datetime import datetime as dt
 from pymongo import MongoClient
 from flask_cors import CORS
+import hashlib
 
 api = Flask(__name__)
 cors = CORS(api)
@@ -15,15 +16,16 @@ api.config['CORS_HEADERS'] = 'Content-Type'
 conf = config()
 iaRequest = ModelRequest(host=conf.ia_ip,port=conf.ia_port,argsList=['ingredients'],resource='request')
 db = MongoClient(conf.mongo_uri)
-api.secret_key = conf.flask_secret
+session = []
+
 
 def login_required(func): # Wrapper to check if the user is in session if required
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if 'username' in session:
-            return func(*args, **kwargs)
-        else:
+        username_hash = request.headers.get('secretAuth')
+        if username_hash not in session:
             return jsonify({'message': 'user not in session'}), 401
+        return func(*args, **kwargs)
     return wrapper
 
 def checkPassword(username,password) -> bool: # check if the password is correct
@@ -36,15 +38,16 @@ def login(): #Add user to session
     password = request.headers.get('password')
     #TODO:delete from here when the mongo database is ready
     if username == 'test' and password == 'test':
-        session['username'] = username
-        print("Login successful")
-        return jsonify({'message': 'login successful'}), 200
+        username_hash = hashlib.sha256((username + dt.now.__str__()).encode()).hexdigest()
+        print(username_hash) #TODO: quitar esto
+        session.append(username_hash)
+        return jsonify({'secretAuth': username_hash}), 200
         
     else:
         return jsonify({'message': 'login failed'}), 401
     #TODO: to here
     if checkPassword(username,password):
-        session['username'] = username
+        session.append(username)
         return jsonify({'message': 'login successful'}), 200
     else:
         return jsonify({'message': 'login failed'}), 401
@@ -52,14 +55,14 @@ def login(): #Add user to session
 @api.route('/logout')
 @login_required
 def logout(): #Remove user from session
-    session.pop('username', None)
+    username_hash = request.headers.get('hash')
+    session.pop(username_hash)
     return jsonify({'message': 'logout successful'}), 200
 
 @api.route('/create_recipe', methods=['GET'])
 @login_required
 def createRecipe(): # request a recipe inference to the IA model
-    ingredients = request.form['ingredients'] #The ingredinetes are passed as a vector of strings
-    ingredients = ','.join(ingredients) #Convert the list to a string separated by commas
+    ingredients = request.headers.get('ingredients') #The ingredinetes are passed as a vector of strings
     response = iaRequest.request([ingredients]) #Send the request to the IA model
     if response.status_code == 200: #If the request was successful
         return response.json(), 200
